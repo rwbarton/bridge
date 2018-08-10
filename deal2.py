@@ -41,7 +41,7 @@ def write_gib_file(filename: str, hand: str) -> None:
     f.close()
 
 def build_inputs(directory: str, count: int) -> List[Tuple[str,str]]:
-    os.mkdir(directory)
+    os.makedirs(directory, exist_ok=True)
     filenames = [os.path.join(directory, 'hand%d' % i)
                  for i in range(0, count)]
     inNf = open(os.path.join(directory, 'inN'), 'w')
