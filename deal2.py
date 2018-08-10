@@ -6,6 +6,10 @@ import random
 import re
 import subprocess
 
+count = 10 # number of hands
+gib_dir = 'gib_dir'
+temp_dir = 'tmp2'
+
 Card = Tuple[int,str]
 
 one_suit = list("AKQJT98765432")
@@ -53,8 +57,6 @@ def build_inputs(directory: str, count: int) -> List[Tuple[str,str]]:
     inNf.close()
     inSf.close()
     return hands
-
-gib_dir = '/home/rwbarton/.wine/drive_c/Bridge Base Online/robots/gib'
 
 def run_gib(filename: str, count: int) -> List[List[str]]:
     # GIB must run from its own directory (or the locations of its
@@ -116,9 +118,8 @@ def run_gib(filename: str, count: int) -> List[List[str]]:
         auctions.append(auction)
     return auctions
 
-count = 10000
-hands = build_inputs('tmp2', count)
-auctions = run_gib(os.path.abspath('tmp2/in'), count)
+hands = build_inputs(temp_dir, count)
+auctions = run_gib(os.path.abspath(os.path.join(temp_dir, 'in')), count)
 for hand, auction in zip(hands, auctions):
     print("%s\t%s" % (hand, auction))
     
