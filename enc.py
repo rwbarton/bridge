@@ -4,6 +4,12 @@ from typing import List
 
 import progressbar
 import numpy as np
+import sys
+import argparse
+import os
+
+OUTPUT_DIR_HANDS = "dat"
+OUTPUT_DIR_BIDS = os.path.join(OUTPUT_DIR_HANDS, "bids")
 
 one_suit = list("AKQJT98765432")
 
@@ -37,22 +43,38 @@ def idx_to_bid(idx: int) -> str:
 def bid_to_np(bid):
     return np.eye(38, dtype=np.float32)[bid_to_idx(bid)]
 
+def main():
+    #despite what tabbott says, we aren't doing this right now
+    #parser = argparse.ArgumentParser()  
+    #parser.parse_args() 
 
-ROWS = 4000000
-handsN = np.zeros((ROWS, 52), dtype=np.float32)
-handsS = np.zeros((ROWS, 52), dtype=np.float32)
-bids = [np.full(ROWS, -1, dtype=np.int8) for _ in range(15)]
-bar = progressbar.ProgressBar()
-f = open('4M2.txt', 'r')
-for i in bar(range(ROWS)):
-    l = f.readline()
-    (handN, handS), auction = (eval(col) for col in l.rstrip().split('\t'))
-    handsN[i] = np.array(hand_to_vec(handN), dtype=np.float32)
-    handsS[i] = np.array(hand_to_vec(handS), dtype=np.float32)
-    for j, b in enumerate(auction):
-        bids[j][i] = bid_to_idx(b)
+    if not len(sys.argv) > 1: raise AssertionError("Command line argument is required to specify the input file name.")
+    input_file = sys.argv[1]
 
-np.save('dat/handsN', handsN)
-np.save('dat/handsS', handsS)
-for j in range(15):
-    np.save('bids%d' % (j,), bids[j])
+    with open(input_file, 'r') as fin:
+        ROWS = sum(1 for line in fin if line.rstrip())
+
+    handsN = np.zeros((ROWS, 52), dtype=np.float32)
+    handsS = np.zeros((ROWS, 52), dtype=np.float32)
+    bids = [np.full(ROWS, -1, dtype=np.int8) for _ in range(15)]
+    bar = progressbar.ProgressBar()
+
+    f = open(input_file, 'r')
+    for i in bar(range(ROWS)):
+        l = f.readline()
+        (handN, handS), auction = (eval(col) for col in l.rstrip().split('\t'))
+        handsN[i] = np.array(hand_to_vec(handN), dtype=np.float32)
+        handsS[i] = np.array(hand_to_vec(handS), dtype=np.float32)
+        for j, b in enumerate(auction):
+            bids[j][i] = bid_to_idx(b)
+
+    os.makedirs(OUTPUT_DIR_HANDS, exist_ok=True)
+    os.makedirs(OUTPUT_DIR_BIDS, exist_ok=True)
+    np.save(os.path.join(OUTPUT_DIR_HANDS, 'handsN'), handsN)
+    np.save(os.path.join(OUTPUT_DIR_HANDS, 'handsS'), handsS)
+    for j in range(15):
+        np.save(os.path.join(OUTPUT_DIR_BIDS,'bids%d') % (j,), bids[j])
+
+if __name__ == "__main__":
+    main()
+    
