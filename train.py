@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import argparse
 import progressbar
 import numpy as np
 import tensorflow as tf
@@ -11,6 +12,25 @@ BIDS_DIR = "dat/bids"
 OUTPUT_DIR = "models"
 NBIDS = 38
 NCARDS = 52
+learn = 0.001
+
+parser = argparse.ArgumentParser(description='Train bidders.')
+parser.add_argument('nplayers', metavar='N', type=int,
+                    help='number of players')
+parser.add_argument('ply', metavar='P', type=int,
+                    help='number of bid')
+parser.add_argument('iters', metavar='P', type=int,
+                    help='number of learning iterations')
+#parser.add_argument('learn', metavar='L', type=int,
+#                    help='learning rate',default=0.001)
+args = parser.parse_args()
+
+nplayers = args.nplayers
+ply = args.ply
+iters = args.iters
+if not nplayers in {2,4}:
+    print("number of of players must be 2 or 4")
+    sys.exit(2)
 
 def weight_variable(shape):
   initial = tf.truncated_normal(shape, stddev=0.1)
@@ -20,13 +40,12 @@ def bias_variable(shape):
   initial = tf.constant(0.1, shape=shape)
   return tf.Variable(initial)
 
-if len(sys.argv) >= 4:
-    [ply, iters, learn] = [int(a) for a in sys.argv[1:]]
-else:
-    [ply, iters] = [int(a) for a in sys.argv[1:]]
-    learn = 0.001
 
-hands = np.load(os.path.join(HANDS_DIR, 'hands%s.npy' % ("SN"[ply % 2],)))
+if nplayers == 4:
+    hands = np.load(os.path.join(HANDS_DIR, 'hands%s.npy' % ("NESW"[ply % 4],)))
+else:
+    hands = np.load(os.path.join(HANDS_DIR, 'hands%s.npy' % ("SN"[ply % 2],)))
+
 bids = []
 for p in range(ply+1):
     bids.append(np.load(os.path.join(BIDS_DIR,'bids%d.npy' % (p,))))
