@@ -4,6 +4,13 @@ import sys
 import progressbar
 import numpy as np
 import tensorflow as tf
+import os
+
+HANDS_DIR = "dat"
+BIDS_DIR = "dat/bids"
+OUTPUT_DIR = "models"
+NBIDS = 38
+NCARDS = 52
 
 def weight_variable(shape):
   initial = tf.truncated_normal(shape, stddev=0.1)
@@ -13,13 +20,16 @@ def bias_variable(shape):
   initial = tf.constant(0.1, shape=shape)
   return tf.Variable(initial)
 
+if len(sys.argv) >= 4:
+    [ply, iters, learn] = [int(a) for a in sys.argv[1:]]
+else:
+    [ply, iters] = [int(a) for a in sys.argv[1:]]
+    learn = 0.001
 
-[ply, iters, learn] = [int(a) for a in sys.argv[1:]]
-
-hands = np.load('dat/hands%s.npy' % ("SN"[ply % 2],))
+hands = np.load(os.path.join(HANDS_DIR, 'hands%s.npy' % ("SN"[ply % 2],)))
 bids = []
 for p in range(ply+1):
-    bids.append(np.load('dat/bids%d.npy' % (p,)))
+    bids.append(np.load(os.path.join(BIDS_DIR,'bids%d.npy' % (p,))))
 print('Loaded')
 # bids[ply] is the output we are trying to learn,
 # previous bids (and hands) are the input
@@ -34,15 +44,19 @@ print('Filtered')
 total_hands = bids[0].size
 #total_hands //= 40
 print(total_hands, 'hands')
-INPUTS = 52 + 38 * ply          # our hand + preceding calls
+if total_hands == 0:
+    print("Cannot train with 0 hands. Quitting.")
+    sys.exit(0)
+
+INPUTS = NCARDS + NBIDS * ply          # our hand + preceding calls
 all_in = np.zeros((total_hands, INPUTS), dtype=np.float32)
-all_out = np.zeros((total_hands, 38), dtype=np.float32)
-eye = np.eye(38, dtype=np.float32)
+all_out = np.zeros((total_hands, NBIDS), dtype=np.float32)
+eye = np.eye(NBIDS, dtype=np.float32)
 bar = progressbar.ProgressBar()
 for i in bar(range(total_hands)):
-    all_in[i][0:52] = hands[i]
+    all_in[i][0:NCARDS] = hands[i]
     for p in range(ply):
-        all_in[i][(52+38*p):(52+38*(p+1))] = eye[bids[p][i]]
+        all_in[i][(NCARDS+NBIDS*p):(NCARDS+NBIDS*(p+1))] = eye[bids[p][i]]
     all_out[i] = eye[bids[ply][i]]
 # Free things we no longer need
 del hands
@@ -54,10 +68,10 @@ x = tf.placeholder(tf.float32, [None, INPUTS])
 W1 = weight_variable([INPUTS, MIDDLE])
 b1 = bias_variable([MIDDLE])
 x1 = tf.nn.relu(tf.matmul(x, W1) + b1)
-W = weight_variable([MIDDLE,38])
-b = bias_variable([38])
+W = weight_variable([MIDDLE,NBIDS])
+b = bias_variable([NBIDS])
 y = tf.matmul(x1, W) + b
-y_ = tf.placeholder(tf.float32, [None, 38])
+y_ = tf.placeholder(tf.float32, [None, NBIDS])
 
 cross_entropy = tf.reduce_mean(
     tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=y))
@@ -65,7 +79,7 @@ correct_prediction = tf.equal(tf.argmax(y,1), tf.argmax(y_,1))
 accuracy = tf.reduce_sum(tf.cast(correct_prediction, tf.float32))
 
 #train_step = tf.train.GradientDescentOptimizer(0.015).minimize(cross_entropy)
-train_step = tf.train.AdamOptimizer(learn/10000).minimize(cross_entropy)
+train_step = tf.train.AdamOptimizer(learn).minimize(cross_entropy)
 
 sess = tf.InteractiveSession()
 tf.global_variables_initializer().run()
@@ -99,5 +113,6 @@ for l in range(iters):
     print(l, "Acc", acc, flush=True)
 
 saver = tf.train.Saver()
-save_path = saver.save(sess, 'models/hands%d_%d.ckpt' % (ply, iters))
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+save_path = saver.save(sess, os.path.join(OUTPUT_DIR, 'hands%d_%d.ckpt' % (ply, iters)))
 print("Model saved in %s" % save_path)

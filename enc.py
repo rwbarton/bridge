@@ -48,8 +48,13 @@ def main():
     #parser = argparse.ArgumentParser()  
     #parser.parse_args() 
 
-    if not len(sys.argv) > 1: raise AssertionError("Command line argument is required to specify the input file name.")
+    if not len(sys.argv) > 2: raise AssertionError("Command line arguments are required to specify the input file name and max auction length.")
     input_file = sys.argv[1]
+    try:
+        max_auction_length = int(sys.argv[2])
+    except ValueError:
+        print("Max auction length must be an integer.")
+
 
     with open(input_file, 'r') as fin:
         ROWS = sum(1 for line in fin if line.rstrip())
@@ -72,9 +77,8 @@ def main():
     os.makedirs(OUTPUT_DIR_BIDS, exist_ok=True)
     np.save(os.path.join(OUTPUT_DIR_HANDS, 'handsN'), handsN)
     np.save(os.path.join(OUTPUT_DIR_HANDS, 'handsS'), handsS)
-    for j in range(15):
+    for j in range(max_auction_length):
         np.save(os.path.join(OUTPUT_DIR_BIDS,'bids%d') % (j,), bids[j])
 
 if __name__ == "__main__":
     main()
-    
