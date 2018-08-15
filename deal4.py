@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 
 from typing import List, Tuple
+import argparse
 import os
 import random
 import re
 import subprocess
 
-count = 10 # number of hands
+parser = argparse.ArgumentParser(description='Deal some hands and have GIB bid them.')
+parser.add_argument('count', metavar='N', type=int,
+                    help='number of hands to deal')
+args = parser.parse_args()
+
+count = args.count # number of hands
 gib_dir = 'gib_dir'
 temp_dir = 'tmp2'
 
