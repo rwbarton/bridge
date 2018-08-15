@@ -68,25 +68,23 @@ def build_inputs(directory: str, count: int) -> List[Tuple[str,str,str,str]]:
     inWf.close()
     return hands
 
+def invoke_gib(seat: str, filename: str) -> subprocess.Popen:
+    # -Q: skip the lead/play phase.
+    # This lets us avoid whichever GIB is on lead thinking about what to lead,
+    # which is slow and apparently cannot be made faster, and also simplifies
+    # our logic (don't need to tell GIB to advance to the next hand explicitly).
+    return subprocess.Popen(['wine', 'bridge.exe', '-c', '-j', '-I', seat, '-T', '1', '-Q',
+                             '-i', filename],
+                            cwd=gib_dir, stdin=subprocess.PIPE,
+                            stdout=subprocess.PIPE)
+
 def run_gib(filename: str, hands: List[Tuple[str,str,str,str]]) -> List[List[str]]:
     # GIB must run from its own directory (or the locations of its
     # data files could be specified on the command line)
-    gibN = subprocess.Popen(['wine', 'bridge.exe', '-j', '-I', '-T', '1', '-N',
-                             '-i', filename + 'N'],
-                            cwd=gib_dir, stdin=subprocess.PIPE,
-                            stdout=subprocess.PIPE)
-    gibE = subprocess.Popen(['wine', 'bridge.exe', '-j', '-I', '-T', '1', '-E',
-                             '-i', filename + 'E'],
-                            cwd=gib_dir, stdin=subprocess.PIPE,
-                            stdout=subprocess.PIPE)
-    gibS = subprocess.Popen(['wine', 'bridge.exe', '-j', '-I', '-T', '1', '-S',
-                             '-i', filename + 'S'],
-                            cwd=gib_dir, stdin=subprocess.PIPE,
-                            stdout=subprocess.PIPE)
-    gibW = subprocess.Popen(['wine', 'bridge.exe', '-j', '-I', '-T', '1', '-W',
-                             '-i', filename + 'W'],
-                            cwd=gib_dir, stdin=subprocess.PIPE,
-                            stdout=subprocess.PIPE)
+    gibN = invoke_gib('-N', filename + 'N')
+    gibE = invoke_gib('-E', filename + 'E')
+    gibS = invoke_gib('-S', filename + 'S')
+    gibW = invoke_gib('-W', filename + 'W')
 
     auctions = []  # type: List[List[bytes]]
     last_hand = None  # type: Tuple[str,str,str,str]
@@ -121,20 +119,6 @@ def run_gib(filename: str, hands: List[Tuple[str,str,str,str]]) -> List[List[str
             engines = engines[1:] + engines[0:1]
             hand = hand[1:] + hand[0:1]
 
-        # auction is over; tell engines to advance to the next hand
-        # But, don't if the hand is a pass-out, since they will advance
-        # to the next hand automatically.
-        if auction != ['P', 'P', 'P', 'P']:
-            for engine in engines:
-                while True:
-                    line = engine.stdout.readline()
-                    if line.startswith(b'Enter dummy\'s hand:'):
-                        engine.stdin.write(b'%s\n' % hand[1].encode('utf-8'))
-                        engine.stdin.flush()
-                    if line.startswith(b'Enter play for'):
-                        break
-                engine.stdin.write(b'q\n')
-                engine.stdin.flush()
         auctions.append(auction)
         last_hand = hand
     return auctions
