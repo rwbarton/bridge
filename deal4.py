@@ -10,11 +10,13 @@ import subprocess
 parser = argparse.ArgumentParser(description='Deal some hands and have GIB bid them.')
 parser.add_argument('count', metavar='N', type=int,
                     help='number of hands to deal')
+parser.add_argument('--tmpdir', metavar='TMPDIR', type=str, default='tmp2',
+                    help='temporary working directory to use')
 args = parser.parse_args()
 
 count = args.count # number of hands
 gib_dir = 'gib_dir'
-temp_dir = 'tmp2'
+temp_dir = args.tmpdir
 
 Card = Tuple[int,str]
 
