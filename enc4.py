@@ -75,6 +75,8 @@ def main():
         handsS[i] = np.array(hand_to_vec(handS), dtype=np.float32)
         handsW[i] = np.array(hand_to_vec(handW), dtype=np.float32)
         for j, b in enumerate(auction):
+            if j >= max_auction_length:
+                break
             bids[j][i] = bid_to_idx(b)
 
     os.makedirs(OUTPUT_DIR_HANDS, exist_ok=True)
