@@ -86,10 +86,9 @@ def run_gib(filename: str, hands: List[Tuple[str,str,str,str]]) -> List[List[str
     gibS = invoke_gib('-S', filename + 'S')
     gibW = invoke_gib('-W', filename + 'W')
 
-    auctions = []  # type: List[List[bytes]]
-    last_hand = None  # type: Tuple[str,str,str,str]
-    for hand in hands:
-        auction = []  # type: List[bytes]
+    auctions = []  # type: List[List[str]]
+    for _ in hands:
+        auction = []  # type: List[str]
         engines = [gibN, gibE, gibS, gibW]  # North deals
         while True:
             # send enqueued bids
@@ -114,13 +113,10 @@ def run_gib(filename: str, hands: List[Tuple[str,str,str,str]]) -> List[List[str
             auction.append(bid.decode('utf-8'))
             if auction[-3:] == ['P', 'P', 'P'] and len(auction) >= 4:
                 break
-            start = False
 
             engines = engines[1:] + engines[0:1]
-            hand = hand[1:] + hand[0:1]
 
         auctions.append(auction)
-        last_hand = hand
     return auctions
 
 hands = build_inputs(temp_dir, count)
